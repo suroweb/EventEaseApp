@@ -64,7 +64,7 @@
                                 <i class="bi bi-ticket"></i> <strong>Tickets:</strong> @registration.NumberOfTickets
                             </p>
                             <p class="mb-2">
-                                <i class="bi bi-currency-dollar"></i> <strong>Total Amount:</strong> $@registration.TotalAmount.ToString("F2")
+                                <i class="bi bi-currency-dollar"></i> <strong>Total Amount:</strong> $@(registration.TotalAmount.ToString("F2"))
                             </p>
                             <p class="mb-2">
                                 <i class="bi bi-info-circle"></i> <strong>Status:</strong> 
@@ -109,7 +109,7 @@
                     <div class="card text-center">
                         <div class="card-body">
                             <h5 class="card-title">Total Spent</h5>
-                            <p class="display-6">$@Registrations.Sum(r => r.TotalAmount).ToString("F2")</p>
+                            <p class="display-6">$@(Registrations.Sum(r => r.TotalAmount).ToString("F2"))</p>
                         </div>
                     </div>
                 </div>
