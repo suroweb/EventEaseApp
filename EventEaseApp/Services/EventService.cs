@@ -13,14 +13,14 @@ namespace EventEaseApp.Services
                 new Event
                 {
                     Id = 1,
-                    Name = "Tech Innovation Summit 2024",
+                    Name = "Tech Innovation Summit 2025",
                     Description = "Join industry leaders for a day of insights into the latest technology trends, AI advancements, and digital transformation strategies.",
                     Date = DateTime.Now.AddDays(30),
                     Location = "San Francisco, CA",
                     Venue = "Moscone Center",
                     Price = 299.99m,
                     MaxAttendees = 500,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Tech+Innovation+Summit",
+                    ImageUrl = "/images/events/tech-innovation-summit.png",
                     Category = "Technology",
                     IsAvailable = true
                 },
@@ -34,7 +34,7 @@ namespace EventEaseApp.Services
                     Venue = "The Plaza Hotel",
                     Price = 450.00m,
                     MaxAttendees = 300,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Corporate+Gala",
+                    ImageUrl = "/images/events/corporate-gala.png",
                     Category = "Corporate",
                     IsAvailable = true
                 },
@@ -48,7 +48,7 @@ namespace EventEaseApp.Services
                     Venue = "Marketing Hub Center",
                     Price = 199.99m,
                     MaxAttendees = 100,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Marketing+Workshop",
+                    ImageUrl = "/images/events/marketing-workshop.png",
                     Category = "Education",
                     IsAvailable = true
                 },
@@ -62,7 +62,7 @@ namespace EventEaseApp.Services
                     Venue = "Washington State Convention Center",
                     Price = 175.00m,
                     MaxAttendees = 400,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Green+Business",
+                    ImageUrl = "/images/events/green-business-conference.png",
                     Category = "Environment",
                     IsAvailable = true
                 },
@@ -76,7 +76,7 @@ namespace EventEaseApp.Services
                     Venue = "Capital Factory",
                     Price = 50.00m,
                     MaxAttendees = 200,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Startup+Pitch",
+                    ImageUrl = "/images/events/startup-pitch-night.png",
                     Category = "Entrepreneurship",
                     IsAvailable = true
                 },
@@ -90,7 +90,7 @@ namespace EventEaseApp.Services
                     Venue = "Boston Convention Center",
                     Price = 325.00m,
                     MaxAttendees = 350,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Healthcare+Innovation",
+                    ImageUrl = "/images/events/healthcare-innovation-symposium.png",
                     Category = "Healthcare",
                     IsAvailable = true
                 },
@@ -104,7 +104,7 @@ namespace EventEaseApp.Services
                     Venue = "Miami Beach Convention Center",
                     Price = 275.00m,
                     MaxAttendees = 250,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Finance+Forum",
+                    ImageUrl = "/images/events/finance-investment-forum.png",
                     Category = "Finance",
                     IsAvailable = true
                 },
@@ -118,7 +118,7 @@ namespace EventEaseApp.Services
                     Venue = "Rocky Mountain Adventure Park",
                     Price = 125.00m,
                     MaxAttendees = 50,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Team+Building",
+                    ImageUrl = "/images/events/team-building-adventure.png",
                     Category = "Corporate",
                     IsAvailable = true
                 },
@@ -132,7 +132,7 @@ namespace EventEaseApp.Services
                     Venue = "Silicon Valley Conference Center",
                     Price = 399.99m,
                     MaxAttendees = 600,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=AI+Summit",
+                    ImageUrl = "/images/events/ai-machine-learning-summit.png",
                     Category = "Technology",
                     IsAvailable = true
                 },
@@ -146,7 +146,7 @@ namespace EventEaseApp.Services
                     Venue = "Executive Leadership Center",
                     Price = 225.00m,
                     MaxAttendees = 80,
-                    ImageUrl = "https://via.placeholder.com/400x200?text=Leadership+Workshop",
+                    ImageUrl = "/images/events/leadership-excellence-workshop.png",
                     Category = "Education",
                     IsAvailable = true
                 }
