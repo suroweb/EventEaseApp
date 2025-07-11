@@ -1,0 +1,93 @@
+@using EventEaseApp.Services
+@inject NotificationService NotificationService
+@implements IDisposable
+
+@if (IsVisible)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
+        <div class="toast show @AlertClass" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="bi @IconClass me-2"></i>
+                <strong class="me-auto">@Title</strong>
+                <button type="button" class="btn-close" @onclick="Hide" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                @Message
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool IsVisible { get; set; }
+    private string Message { get; set; } = string.Empty;
+    private NotificationType Type { get; set; }
+    private System.Timers.Timer? _timer;
+
+    private string Title => Type switch
+    {
+        NotificationType.Success => "Success",
+        NotificationType.Error => "Error",
+        NotificationType.Warning => "Warning",
+        NotificationType.Info => "Information",
+        _ => "Notification"
+    };
+
+    private string AlertClass => Type switch
+    {
+        NotificationType.Success => "border-success",
+        NotificationType.Error => "border-danger",
+        NotificationType.Warning => "border-warning",
+        NotificationType.Info => "border-info",
+        _ => "border-primary"
+    };
+
+    private string IconClass => Type switch
+    {
+        NotificationType.Success => "bi-check-circle-fill text-success",
+        NotificationType.Error => "bi-exclamation-circle-fill text-danger",
+        NotificationType.Warning => "bi-exclamation-triangle-fill text-warning",
+        NotificationType.Info => "bi-info-circle-fill text-info",
+        _ => "bi-bell-fill text-primary"
+    };
+
+    protected override void OnInitialized()
+    {
+        NotificationService.OnShow += ShowNotification;
+        NotificationService.OnHide += Hide;
+    }
+
+    private void ShowNotification(string message, NotificationType type)
+    {
+        Message = message;
+        Type = type;
+        IsVisible = true;
+        InvokeAsync(StateHasChanged);
+
+        // Auto-hide after 5 seconds
+        _timer?.Stop();
+        _timer?.Dispose();
+        _timer = new System.Timers.Timer(5000);
+        _timer.Elapsed += (sender, args) =>
+        {
+            Hide();
+            _timer?.Dispose();
+        };
+        _timer.Start();
+    }
+
+    private void Hide()
+    {
+        IsVisible = false;
+        InvokeAsync(StateHasChanged);
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnShow -= ShowNotification;
+        NotificationService.OnHide -= Hide;
+        _timer?.Dispose();
+    }
+}

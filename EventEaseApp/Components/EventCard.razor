@@ -1,0 +1,83 @@
+@using EventEaseApp.Models
+@using EventEaseApp.Services
+@inject RegistrationService RegistrationService
+
+@if (Event != null)
+{
+    <div class="card h-100 shadow-sm">
+        @if (!string.IsNullOrEmpty(Event.ImageUrl))
+        {
+            <img src="@Event.ImageUrl" class="card-img-top" alt="@(Event.Name ?? "Event")" style="height: 200px; object-fit: cover;">
+        }
+        <div class="card-body d-flex flex-column">
+            <h5 class="card-title">@(Event.Name ?? "Untitled Event")</h5>
+            <p class="card-text flex-grow-1">@(Event.Description ?? "No description available.")</p>
+            <div class="mt-auto">
+                <p class="mb-2">
+                    <i class="bi bi-calendar"></i> @Event.Date.ToString("MMM dd, yyyy")
+                    <br />
+                    <i class="bi bi-clock"></i> @Event.Date.ToString("hh:mm tt")
+                </p>
+                <p class="mb-2">
+                    <i class="bi bi-geo-alt"></i> @(Event.Location ?? "TBD")
+                    <br />
+                    <i class="bi bi-building"></i> @(Event.Venue ?? "TBD")
+                </p>
+                <p class="mb-2">
+                    <i class="bi bi-tag"></i> @(Event.Category ?? "General")
+                    <br />
+                    <i class="bi bi-people"></i> Max: @Event.MaxAttendees attendees
+                    @if (RegisteredCount > 0)
+                    {
+                        <br />
+                        <span class="badge bg-info">
+                            <i class="bi bi-person-check"></i> @RegisteredCount registered
+                        </span>
+                    }
+                </p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="h5 mb-0 text-primary">$@Event.Price.ToString("F2")</span>
+                    @if (Event.IsAvailable)
+                    {
+                        <a href="/events/@Event.Id" class="btn btn-primary">View Details</a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-secondary" disabled>Sold Out</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex align-items-center justify-content-center">
+            <div class="alert alert-warning mb-0" role="alert">
+                <i class="bi bi-exclamation-triangle"></i> Event data unavailable
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Event? Event { get; set; }
+    private int RegisteredCount { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Event != null)
+        {
+            try
+            {
+                RegisteredCount = await RegistrationService.GetEventRegistrationCountAsync(Event.Id);
+                StateHasChanged();
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle prerendering scenario
+            }
+        }
+    }
+}

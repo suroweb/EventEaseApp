@@ -1,0 +1,107 @@
+﻿@page "/"
+@using EventEaseApp.Components
+@using EventEaseApp.Services
+@inject UserSessionService UserSessionService
+@inject RegistrationService RegistrationService
+@rendermode InteractiveServer
+
+<PageTitle>EventEase - Corporate & Social Event Management</PageTitle>
+
+<div class="hero-section bg-primary text-white py-5 mb-5">
+    <div class="container text-center">
+        <h1 class="display-3 fw-bold mb-4">Welcome to EventEase</h1>
+        <p class="lead mb-4">Your trusted partner for exceptional corporate and social events</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="/events" class="btn btn-light btn-lg">
+                <i class="bi bi-calendar-event"></i> Browse All Events
+            </a>
+            @if (HasSession)
+            {
+                <a href="/my-registrations" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-ticket-perforated"></i> My Registrations
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <section class="mb-5">
+        <h2 class="text-center mb-4">Why Choose EventEase?</h2>
+        <div class="row g-4">
+            <div class="col-md-4 text-center">
+                <i class="bi bi-award display-4 text-primary mb-3"></i>
+                <h4>Professional Excellence</h4>
+                <p>Over 10 years of experience in organizing world-class corporate events</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <i class="bi bi-people display-4 text-primary mb-3"></i>
+                <h4>Networking Opportunities</h4>
+                <p>Connect with industry leaders and expand your professional network</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <i class="bi bi-shield-check display-4 text-primary mb-3"></i>
+                <h4>Secure & Reliable</h4>
+                <p>Safe registration process and guaranteed event quality</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <h2 class="text-center mb-4">Upcoming Events</h2>
+        <EventList Count="3" />
+        <div class="text-center mt-4">
+            <a href="/events" class="btn btn-primary btn-lg">
+                View All Events <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </section>
+
+    <section class="mb-5 bg-light py-5 rounded">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h3>Ready to Join an Event?</h3>
+                    <p class="lead">Browse our curated selection of corporate and social events. Find the perfect opportunity to learn, network, and grow.</p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-check-circle text-primary"></i> Tech Conferences & Summits</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-primary"></i> Business Networking Events</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-primary"></i> Professional Workshops</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-primary"></i> Corporate Galas & Social Events</li>
+                    </ul>
+                </div>
+                <div class="col-md-6 text-center">
+                    <img src="https://via.placeholder.com/500x300?text=EventEase+Events" class="img-fluid rounded shadow" alt="EventEase Events">
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        margin-top: -1rem;
+    }
+</style>
+
+@code {
+    private bool HasSession { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                HasSession = await UserSessionService.HasValidSessionAsync();
+                StateHasChanged();
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle prerendering scenario
+                HasSession = false;
+            }
+        }
+    }
+}

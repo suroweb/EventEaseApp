@@ -1,0 +1,155 @@
+@page "/my-registrations"
+@using EventEaseApp.Models
+@using EventEaseApp.Services
+@inject RegistrationService RegistrationService
+@inject UserSessionService UserSessionService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>My Registrations - EventEase</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="display-4 mb-4">My Registrations</h1>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading registrations...</span>
+            </div>
+        </div>
+    }
+    else if (string.IsNullOrEmpty(UserEmail))
+    {
+        <div class="alert alert-info" role="alert">
+            <h4 class="alert-heading">No Session Found</h4>
+            <p>Please register for an event first to view your registration history.</p>
+            <hr>
+            <a href="/events" class="btn btn-primary">Browse Events</a>
+        </div>
+    }
+    else if (Registrations == null || !Registrations.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            <h4 class="alert-heading">No Registrations Found</h4>
+            <p>You haven't registered for any events yet.</p>
+            <hr>
+            <a href="/events" class="btn btn-primary">Browse Events</a>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-3">
+            <div class="col">
+                <p class="lead">Showing registrations for: <strong>@UserEmail</strong></p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            @foreach (var registration in Registrations.OrderByDescending(r => r.RegistrationDate))
+            {
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">@registration.EventName</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-2">
+                                <i class="bi bi-person"></i> <strong>Name:</strong> @registration.FirstName @registration.LastName
+                            </p>
+                            <p class="mb-2">
+                                <i class="bi bi-calendar-check"></i> <strong>Registration Date:</strong> @registration.RegistrationDate.ToString("MMM dd, yyyy")
+                            </p>
+                            <p class="mb-2">
+                                <i class="bi bi-ticket"></i> <strong>Tickets:</strong> @registration.NumberOfTickets
+                            </p>
+                            <p class="mb-2">
+                                <i class="bi bi-currency-dollar"></i> <strong>Total Amount:</strong> $@registration.TotalAmount.ToString("F2")
+                            </p>
+                            <p class="mb-2">
+                                <i class="bi bi-info-circle"></i> <strong>Status:</strong> 
+                                <span class="badge bg-success">@registration.Status</span>
+                            </p>
+                            @if (!string.IsNullOrEmpty(registration.SpecialRequests))
+                            {
+                                <p class="mb-0">
+                                    <i class="bi bi-chat-dots"></i> <strong>Special Requests:</strong><br />
+                                    <small class="text-muted">@registration.SpecialRequests</small>
+                                </p>
+                            }
+                        </div>
+                        <div class="card-footer text-muted">
+                            <small>Registration ID: @registration.Id</small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="mt-4">
+            <h3>Registration Summary</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Events</h5>
+                            <p class="display-6">@Registrations.Count</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Tickets</h5>
+                            <p class="display-6">@Registrations.Sum(r => r.NumberOfTickets)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Spent</h5>
+                            <p class="display-6">$@Registrations.Sum(r => r.TotalAmount).ToString("F2")</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Registration>? Registrations { get; set; }
+    private string? UserEmail { get; set; }
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            IsLoading = true;
+            StateHasChanged();
+            
+            try
+            {
+                // Get user session
+                var session = await UserSessionService.GetCurrentSessionAsync();
+                if (session != null)
+                {
+                    UserEmail = session.Email;
+                    Registrations = await RegistrationService.GetRegistrationsByEmailAsync(session.Email);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle prerendering scenario
+                Registrations = new List<Registration>();
+            }
+            finally
+            {
+                IsLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+}

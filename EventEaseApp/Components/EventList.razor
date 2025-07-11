@@ -1,0 +1,61 @@
+@using EventEaseApp.Models
+@using EventEaseApp.Services
+@inject EventService EventService
+
+<div class="container">
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading events...</span>
+            </div>
+            <span class="ms-3">Loading events...</span>
+        </div>
+    }
+    else if (Events != null && Events.Any())
+    {
+        <div class="row g-4">
+            @foreach (var eventItem in Events.Where(e => e != null))
+            {
+                <div class="col-md-6 col-lg-4">
+                    <EventCard Event="eventItem" />
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle"></i> No events available at the moment.
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<Event>? Events { get; set; }
+    [Parameter] public string? Category { get; set; }
+    [Parameter] public int? Count { get; set; }
+    
+    private bool IsLoading = true;
+
+    protected override void OnInitialized()
+    {
+        // Load events synchronously (no LocalStorage calls here)
+        if (Events == null)
+        {
+            if (!string.IsNullOrEmpty(Category))
+            {
+                Events = EventService.GetEventsByCategory(Category);
+            }
+            else if (Count.HasValue)
+            {
+                Events = EventService.GetUpcomingEvents(Count.Value);
+            }
+            else
+            {
+                Events = EventService.GetAllEvents();
+            }
+        }
+        IsLoading = false;
+    }
+}

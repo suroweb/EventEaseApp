@@ -1,0 +1,290 @@
+@page "/register/{eventId:int}"
+@using EventEaseApp.Models
+@using EventEaseApp.Services
+@using System.ComponentModel.DataAnnotations
+@inject EventService EventService
+@inject RegistrationService RegistrationService
+@inject UserSessionService UserSessionService
+@inject NotificationService NotificationService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Register for @(EventItem?.Name ?? "Event") - EventEase</PageTitle>
+
+<div class="container mt-4">
+    @if (EventItem != null)
+    {
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Register for @EventItem.Name</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h5>Event Information</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-calendar"></i> <strong>Date:</strong> @EventItem.Date.ToString("MMMM dd, yyyy hh:mm tt")</li>
+                                <li><i class="bi bi-geo-alt"></i> <strong>Location:</strong> @EventItem.Location - @EventItem.Venue</li>
+                                <li><i class="bi bi-tag"></i> <strong>Price:</strong> $@EventItem.Price.ToString("F2")</li>
+                            </ul>
+                        </div>
+
+                        <hr />
+
+                        @if (!IsRegistered)
+                        {
+                            <EditForm Model="@RegistrationModel" OnValidSubmit="@HandleValidSubmit">
+                                <DataAnnotationsValidator />
+                                <h5 class="mb-3">Attendee Information</h5>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="firstName" class="form-label">First Name <span class="text-danger">*</span></label>
+                                        <InputText id="firstName" class="form-control" @bind-Value="RegistrationModel.FirstName" />
+                                        <ValidationMessage For="@(() => RegistrationModel.FirstName)" class="text-danger" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="lastName" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                        <InputText id="lastName" class="form-control" @bind-Value="RegistrationModel.LastName" />
+                                        <ValidationMessage For="@(() => RegistrationModel.LastName)" class="text-danger" />
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                                    <InputText id="email" type="email" class="form-control" @bind-Value="RegistrationModel.Email" />
+                                    <ValidationMessage For="@(() => RegistrationModel.Email)" class="text-danger" />
+                                    <div class="form-text">We'll send your confirmation to this email.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                    <InputText id="phone" type="tel" class="form-control" @bind-Value="RegistrationModel.Phone" />
+                                    <ValidationMessage For="@(() => RegistrationModel.Phone)" class="text-danger" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="company" class="form-label">Company/Organization</label>
+                                    <InputText id="company" class="form-control" @bind-Value="RegistrationModel.Company" />
+                                    <ValidationMessage For="@(() => RegistrationModel.Company)" class="text-danger" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="attendees" class="form-label">Number of Tickets <span class="text-danger">*</span></label>
+                                    <InputSelect id="attendees" class="form-select" @bind-Value="RegistrationModel.NumberOfTickets">
+                                        <option value="1">1 ticket</option>
+                                        <option value="2">2 tickets</option>
+                                        <option value="3">3 tickets</option>
+                                        <option value="4">4 tickets</option>
+                                        <option value="5">5 tickets</option>
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => RegistrationModel.NumberOfTickets)" class="text-danger" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="specialRequests" class="form-label">Special Requests or Dietary Requirements</label>
+                                    <InputTextArea id="specialRequests" class="form-control" rows="3" @bind-Value="RegistrationModel.SpecialRequests" />
+                                    <ValidationMessage For="@(() => RegistrationModel.SpecialRequests)" class="text-danger" />
+                                </div>
+
+                                <ValidationSummary class="text-danger" />
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <InputCheckbox id="termsCheck" class="form-check-input" @bind-Value="AcceptTerms" />
+                                        <label class="form-check-label" for="termsCheck">
+                                            I agree to the terms and conditions <span class="text-danger">*</span>
+                                        </label>
+                                    </div>
+                                    @if (ShowTermsError)
+                                    {
+                                        <div class="text-danger">You must accept the terms and conditions to proceed.</div>
+                                    }
+                                </div>
+
+                                <hr />
+
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h4>Total: $@(EventItem.Price * RegistrationModel.NumberOfTickets).ToString("F2")</h4>
+                                    <small class="text-muted">for @RegistrationModel.NumberOfTickets ticket(s)</small>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg" disabled="@(IsProcessing || !AcceptTerms)">
+                                        @if (IsProcessing)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            <span>Processing...</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-check-circle"></i>
+                                            <span>Complete Registration</span>
+                                        }
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelRegistration" disabled="@IsProcessing">
+                                        <i class="bi bi-x-circle"></i> Cancel
+                                    </button>
+                                </div>
+                            </EditForm>
+                        }
+                        else
+                        {
+                            <div class="alert alert-success" role="alert">
+                                <h4 class="alert-heading"><i class="bi bi-check-circle-fill"></i> Registration Successful!</h4>
+                                <p>Thank you for registering for @EventItem.Name.</p>
+                                <hr>
+                                <p class="mb-0">A confirmation email has been sent to @RegistrationModel.Email with your registration details.</p>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <a href="/events" class="btn btn-primary">
+                                    <i class="bi bi-arrow-left"></i> Browse More Events
+                                </a>
+                                <a href="/" class="btn btn-outline-secondary">
+                                    <i class="bi bi-house"></i> Back to Home
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-circle"></i> Event not found
+        </div>
+        <a href="/events" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back to Events
+        </a>
+    }
+</div>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    private Event? EventItem { get; set; }
+    private Registration RegistrationModel = new();
+    private bool AcceptTerms = false;
+    private bool IsRegistered = false;
+    private bool IsProcessing = false;
+    private bool ShowTermsError = false;
+    private int TotalSeatsAvailable = 0;
+
+    protected override void OnInitialized()
+    {
+        EventItem = EventService.GetEventById(EventId);
+        if (EventItem != null)
+        {
+            RegistrationModel.EventId = EventItem.Id;
+            RegistrationModel.EventName = EventItem.Name;
+            TotalSeatsAvailable = EventItem.MaxAttendees; // Default value
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && EventItem != null)
+        {
+            try
+            {
+                // Check available seats
+                var registeredCount = await RegistrationService.GetEventRegistrationCountAsync(EventItem.Id);
+                TotalSeatsAvailable = EventItem.MaxAttendees - registeredCount;
+                
+                // Try to fill from user session
+                var session = await UserSessionService.GetCurrentSessionAsync();
+                if (session != null)
+                {
+                    RegistrationModel.FirstName = session.FirstName;
+                    RegistrationModel.LastName = session.LastName;
+                    RegistrationModel.Email = session.Email;
+                    RegistrationModel.Phone = session.Phone;
+                    RegistrationModel.Company = session.Company;
+                }
+                
+                StateHasChanged();
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle prerendering scenario
+            }
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        ShowTermsError = false;
+        
+        if (!AcceptTerms)
+        {
+            ShowTermsError = true;
+            return;
+        }
+
+        if (EventItem == null) return;
+
+        IsProcessing = true;
+        
+        try
+        {
+            // Check if user is already registered
+            var isAlreadyRegistered = await RegistrationService.IsUserRegisteredForEventAsync(EventItem.Id, RegistrationModel.Email);
+            if (isAlreadyRegistered)
+            {
+                NotificationService.ShowWarning("You are already registered for this event.");
+                IsProcessing = false;
+                return;
+            }
+
+            // Check if enough seats available
+            var currentRegistrations = await RegistrationService.GetEventRegistrationCountAsync(EventItem.Id);
+            if (currentRegistrations + RegistrationModel.NumberOfTickets > EventItem.MaxAttendees)
+            {
+                NotificationService.ShowError("Not enough seats available for your request.");
+                IsProcessing = false;
+                return;
+            }
+
+            // Calculate total amount
+            RegistrationModel.TotalAmount = EventItem.Price * RegistrationModel.NumberOfTickets;
+            RegistrationModel.RegistrationDate = DateTime.Now;
+
+            // Save registration
+            var success = await RegistrationService.AddRegistrationAsync(RegistrationModel);
+            
+            if (success)
+            {
+                // Update user session
+                await UserSessionService.CreateOrUpdateSessionAsync(
+                    RegistrationModel.Email,
+                    RegistrationModel.FirstName,
+                    RegistrationModel.LastName,
+                    RegistrationModel.Phone,
+                    RegistrationModel.Company
+                );
+
+                NotificationService.ShowSuccess("Registration completed successfully!");
+                IsRegistered = true;
+            }
+            else
+            {
+                NotificationService.ShowError("Failed to complete registration. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError($"An error occurred: {ex.Message}");
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private void CancelRegistration()
+    {
+        Navigation.NavigateTo($"/events/{EventId}");
+    }
+}

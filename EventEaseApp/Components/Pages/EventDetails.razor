@@ -1,0 +1,166 @@
+@page "/events/{id:int}"
+@using EventEaseApp.Models
+@using EventEaseApp.Services
+@inject EventService EventService
+@inject RegistrationService RegistrationService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>@(EventItem?.Name ?? "Event Details") - EventEase</PageTitle>
+
+<div class="container mt-4">
+    @if (EventItem != null)
+    {
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/events">Events</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@EventItem.Name</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <h1 class="display-4 mb-3">@EventItem.Name</h1>
+                
+                @if (!string.IsNullOrEmpty(EventItem.ImageUrl))
+                {
+                    <img src="@EventItem.ImageUrl" class="img-fluid rounded mb-4" alt="@EventItem.Name" style="width: 100%; max-height: 400px; object-fit: cover;">
+                }
+
+                <div class="mb-4">
+                    <h3>About This Event</h3>
+                    <p class="lead">@EventItem.Description</p>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h4>Event Details</h4>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-calendar-event text-primary"></i>
+                                <strong>Date:</strong> @EventItem.Date.ToString("MMMM dd, yyyy")
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-clock text-primary"></i>
+                                <strong>Time:</strong> @EventItem.Date.ToString("hh:mm tt")
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-tag text-primary"></i>
+                                <strong>Category:</strong> @EventItem.Category
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>Location</h4>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-geo-alt text-primary"></i>
+                                <strong>City:</strong> @EventItem.Location
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-building text-primary"></i>
+                                <strong>Venue:</strong> @EventItem.Venue
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-people text-primary"></i>
+                                <strong>Capacity:</strong> @EventItem.MaxAttendees attendees
+                                @if (RegisteredCount > 0)
+                                {
+                                    <span class="badge bg-info ms-2">@RegisteredCount registered</span>
+                                }
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm sticky-top" style="top: 20px;">
+                    <div class="card-body">
+                        <h4 class="card-title">Registration</h4>
+                        <hr />
+                        <div class="mb-3">
+                            <h2 class="text-primary">$@EventItem.Price.ToString("F2")</h2>
+                            <p class="text-muted">per ticket</p>
+                        </div>
+                        
+                        @if (EventItem.IsAvailable && AvailableSeats > 0)
+                        {
+                            <div class="d-grid gap-2">
+                                <a href="/register/@EventItem.Id" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-ticket-perforated"></i> Register Now
+                                </a>
+                                <a href="/event-attendance/@EventItem.Id" class="btn btn-outline-info">
+                                    <i class="bi bi-people"></i> View Attendance
+                                </a>
+                                <button class="btn btn-outline-secondary" @onclick="GoBack">
+                                    <i class="bi bi-arrow-left"></i> Back to Events
+                                </button>
+                            </div>
+                            <p class="text-muted text-center mt-3">
+                                <i class="bi bi-shield-check"></i> Secure registration
+                            </p>
+                            <p class="text-center">
+                                <small class="text-muted">@AvailableSeats seats remaining</small>
+                            </p>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning" role="alert">
+                                <i class="bi bi-exclamation-triangle"></i> This event is sold out
+                            </div>
+                            <button class="btn btn-outline-secondary w-100" @onclick="GoBack">
+                                <i class="bi bi-arrow-left"></i> Back to Events
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-circle"></i> Event not found
+        </div>
+        <button class="btn btn-primary" @onclick="GoBack">
+            <i class="bi bi-arrow-left"></i> Back to Events
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Event? EventItem { get; set; }
+    private int RegisteredCount { get; set; }
+    private int AvailableSeats { get; set; }
+
+    protected override void OnInitialized()
+    {
+        EventItem = EventService.GetEventById(Id);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && EventItem != null)
+        {
+            try
+            {
+                RegisteredCount = await RegistrationService.GetEventRegistrationCountAsync(Id);
+                AvailableSeats = EventItem.MaxAttendees - RegisteredCount;
+                StateHasChanged();
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle prerendering scenario
+                AvailableSeats = EventItem.MaxAttendees;
+            }
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/events");
+    }
+}

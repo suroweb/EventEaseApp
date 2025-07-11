@@ -1,0 +1,203 @@
+@page "/event-attendance/{eventId:int}"
+@using EventEaseApp.Models
+@using EventEaseApp.Services
+@inject EventService EventService
+@inject RegistrationService RegistrationService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Event Attendance - EventEase</PageTitle>
+
+<div class="container mt-4">
+    @if (EventItem != null)
+    {
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/events">Events</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@EventItem.Name - Attendance</li>
+            </ol>
+        </nav>
+
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-4">@EventItem.Name</h1>
+                <p class="lead">Attendance Tracking</p>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Capacity</h5>
+                        <p class="display-6">@EventItem.MaxAttendees</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Registered</h5>
+                        <p class="display-6 text-primary">@TotalRegistered</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Available</h5>
+                        <p class="display-6 text-success">@(EventItem.MaxAttendees - TotalRegistered)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Occupancy</h5>
+                        <p class="display-6">@((TotalRegistered * 100.0 / EventItem.MaxAttendees).ToString("F1"))%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress mb-4" style="height: 30px;">
+            <div class="progress-bar @(OccupancyPercentage > 90 ? "bg-danger" : OccupancyPercentage > 75 ? "bg-warning" : "bg-success")" 
+                 role="progressbar" 
+                 style="width: @OccupancyPercentage%"
+                 aria-valuenow="@TotalRegistered" 
+                 aria-valuemin="0" 
+                 aria-valuemax="@EventItem.MaxAttendees">
+                @TotalRegistered / @EventItem.MaxAttendees
+            </div>
+        </div>
+
+        @if (IsLoading)
+        {
+            <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading registrations...</span>
+                </div>
+            </div>
+        }
+        else if (Registrations != null && Registrations.Any())
+        {
+            <h3 class="mb-3">Registered Attendees (@Registrations.Count)</h3>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Company</th>
+                            <th>Tickets</th>
+                            <th>Registration Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var registration in Registrations.OrderBy(r => r.RegistrationDate))
+                        {
+                            <tr>
+                                <td>@registration.FirstName @registration.LastName</td>
+                                <td>@registration.Email</td>
+                                <td>@registration.Phone</td>
+                                <td>@(string.IsNullOrEmpty(registration.Company) ? "-" : registration.Company)</td>
+                                <td>@registration.NumberOfTickets</td>
+                                <td>@registration.RegistrationDate.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <span class="badge bg-success">@registration.Status</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4">
+                <button class="btn btn-primary" @onclick="ExportToCSV">
+                    <i class="bi bi-download"></i> Export to CSV
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle"></i> No registrations yet for this event.
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-circle"></i> Event not found
+        </div>
+        <a href="/events" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back to Events
+        </a>
+    }
+</div>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    private Event? EventItem { get; set; }
+    private List<Registration>? Registrations { get; set; }
+    private int TotalRegistered { get; set; }
+    private double OccupancyPercentage => EventItem != null && EventItem.MaxAttendees > 0 
+        ? (TotalRegistered * 100.0 / EventItem.MaxAttendees) 
+        : 0;
+    private bool IsLoading { get; set; } = true;
+
+    protected override void OnInitialized()
+    {
+        EventItem = EventService.GetEventById(EventId);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            IsLoading = true;
+            StateHasChanged();
+            
+            try
+            {
+                if (EventItem != null)
+                {
+                    Registrations = await RegistrationService.GetRegistrationsByEventAsync(EventId);
+                    TotalRegistered = Registrations.Sum(r => r.NumberOfTickets);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle prerendering scenario
+                Registrations = new List<Registration>();
+                TotalRegistered = 0;
+            }
+            finally
+            {
+                IsLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void ExportToCSV()
+    {
+        if (Registrations == null || !Registrations.Any()) return;
+
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("First Name,Last Name,Email,Phone,Company,Tickets,Registration Date,Status");
+        
+        foreach (var reg in Registrations)
+        {
+            csv.AppendLine($"{reg.FirstName},{reg.LastName},{reg.Email},{reg.Phone},{reg.Company},{reg.NumberOfTickets},{reg.RegistrationDate:yyyy-MM-dd},{reg.Status}");
+        }
+
+        // In a real application, this would trigger a file download
+        // For this demo, we'll just show the data in console
+        Console.WriteLine(csv.ToString());
+    }
+}
