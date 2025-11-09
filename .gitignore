@@ -463,3 +463,53 @@ logs/
 **/settings.local.json
 settings.local.json
 .claude/settings.local.json
+
+# Docker & Infrastructure
+docker-compose.override.yml
+*.env
+.env
+.env.local
+.env.*.local
+
+# Nginx
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+nginx/.htpasswd
+
+# Terraform (if used later)
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraformrc
+terraform.rc
+
+# Kubernetes secrets
+*.secret.yaml
+secrets.yaml
+
+# Generated files
+wwwroot/qrcodes/
+wwwroot/certificates/
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep
+temp/
+exports/
+backups/
+
+# Reports
+reports/
+*.pdf
+*.csv
+*.xlsx
+
+# Security & Secrets - NEVER COMMIT
+*secret*
+*password*
+*apikey*
+*token*
+*credentials*
+secrets/
+*.cer
+*.pfx
+*.p12

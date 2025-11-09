@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: eventease-sqlserver
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: EventEase2025!
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - eventease-network
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P EventEase2025! -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  # Redis Cache for Sessions and Caching
+  redis:
+    image: redis:7-alpine
+    container_name: eventease-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - eventease-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # Seq for Centralized Logging (Development)
+  seq:
+    image: datalust/seq:latest
+    container_name: eventease-seq
+    environment:
+      ACCEPT_EULA: Y
+    ports:
+      - "5341:80"
+    volumes:
+      - seq-data:/data
+    networks:
+      - eventease-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MailHog for Email Testing (Development)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: eventease-mailhog
+    ports:
+      - "1025:1025"  # SMTP port
+      - "8025:8025"  # Web UI
+    networks:
+      - eventease-network
+
+  # Nginx Reverse Proxy (Optional - for production-like setup)
+  # Uncomment when API is ready
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: eventease-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - web
+  #   networks:
+  #     - eventease-network
+
+volumes:
+  sqlserver-data:
+    driver: local
+  redis-data:
+    driver: local
+  seq-data:
+    driver: local
+
+networks:
+  eventease-network:
+    driver: bridge
