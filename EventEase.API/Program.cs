@@ -63,6 +63,11 @@ builder.Services.AddScoped<IAnalyticsAgentService, EventEase.Infrastructure.Serv
 builder.Services.AddScoped<IBudgetAgentService, EventEase.Infrastructure.Services.AI.Agents.BudgetAgentService>();
 builder.Services.AddScoped<IIntegrationAgentService, EventEase.Infrastructure.Services.AI.Agents.IntegrationAgentService>();
 
+// ===== Payment Services Configuration =====
+builder.Services.AddScoped<IStripePaymentService, EventEase.Infrastructure.Services.Payment.StripePaymentService>();
+builder.Services.AddScoped<IPaymentWebhookService, EventEase.Infrastructure.Services.Payment.PaymentWebhookService>();
+builder.Services.AddScoped<IInvoiceService, EventEase.Infrastructure.Services.Payment.InvoiceService>();
+
 // ===== JWT Authentication Configuration =====
 var jwtSecret = configuration["JwtSettings:Secret"]
     ?? throw new InvalidOperationException("JWT Secret not configured");
