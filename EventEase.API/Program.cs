@@ -48,6 +48,21 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
 
+// ===== AI Services Configuration =====
+// HTTP clients for AI providers
+builder.Services.AddHttpClient<IOpenAIService, EventEase.Infrastructure.Services.AI.OpenAIService>();
+builder.Services.AddHttpClient<IAnthropicService, EventEase.Infrastructure.Services.AI.AnthropicService>();
+
+// Credit deduction service
+builder.Services.AddScoped<ICreditDeductionService, EventEase.Infrastructure.Services.AI.CreditDeductionService>();
+
+// AI Agent services
+builder.Services.AddScoped<IPlanningAgentService, EventEase.Infrastructure.Services.AI.Agents.PlanningAgentService>();
+builder.Services.AddScoped<IInvitationAgentService, EventEase.Infrastructure.Services.AI.Agents.InvitationAgentService>();
+builder.Services.AddScoped<IAnalyticsAgentService, EventEase.Infrastructure.Services.AI.Agents.AnalyticsAgentService>();
+builder.Services.AddScoped<IBudgetAgentService, EventEase.Infrastructure.Services.AI.Agents.BudgetAgentService>();
+builder.Services.AddScoped<IIntegrationAgentService, EventEase.Infrastructure.Services.AI.Agents.IntegrationAgentService>();
+
 // ===== JWT Authentication Configuration =====
 var jwtSecret = configuration["JwtSettings:Secret"]
     ?? throw new InvalidOperationException("JWT Secret not configured");
