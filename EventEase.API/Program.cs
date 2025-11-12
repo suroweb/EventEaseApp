@@ -76,6 +76,11 @@ builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
 // HTTP clients for AI providers
 builder.Services.AddHttpClient<IOpenAIService, EventEase.Infrastructure.Services.AI.OpenAIService>();
 builder.Services.AddHttpClient<IAnthropicService, EventEase.Infrastructure.Services.AI.AnthropicService>();
+builder.Services.AddHttpClient<IDeepSeekService, EventEase.Infrastructure.Services.AI.DeepSeekService>();
+builder.Services.AddHttpClient<IOllamaService, EventEase.Infrastructure.Services.AI.OllamaService>();
+
+// AI Model Router - Intelligent model selection
+builder.Services.AddScoped<IAIModelRouter, EventEase.Infrastructure.Services.AI.AIModelRouter>();
 
 // Credit deduction service
 builder.Services.AddScoped<ICreditDeductionService, EventEase.Infrastructure.Services.AI.CreditDeductionService>();
