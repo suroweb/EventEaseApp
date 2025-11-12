@@ -46,6 +46,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<BudgetItem> BudgetItems => Set<BudgetItem>();
 
+    // Mobile Devices
+    public DbSet<MobileDevice> MobileDevices => Set<MobileDevice>();
+
+    // Notifications
+    public DbSet<Notification> Notifications => Set<Notification>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

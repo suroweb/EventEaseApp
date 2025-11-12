@@ -1,4 +1,7 @@
 using System.Text;
+using EventEase.API.GraphQL;
+using EventEase.API.GraphQL.DataLoaders;
+using EventEase.API.GraphQL.Types;
 using EventEase.Application.Interfaces;
 using EventEase.Infrastructure.Data;
 using EventEase.Infrastructure.Services;
@@ -34,6 +37,27 @@ builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =
     }
 });
 
+// Add DbContextFactory for GraphQL DataLoaders
+builder.Services.AddDbContextFactory<ApplicationDbContext>((serviceProvider, options) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null
+        );
+    });
+
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+});
+
 // ===== Application Services =====
 builder.Services.AddScoped<IApplicationDbContext>(provider =>
     provider.GetRequiredService<ApplicationDbContext>());
@@ -56,17 +80,43 @@ builder.Services.AddHttpClient<IAnthropicService, EventEase.Infrastructure.Servi
 // Credit deduction service
 builder.Services.AddScoped<ICreditDeductionService, EventEase.Infrastructure.Services.AI.CreditDeductionService>();
 
-// AI Agent services
+// AI Agent services (Phase 1.4)
 builder.Services.AddScoped<IPlanningAgentService, EventEase.Infrastructure.Services.AI.Agents.PlanningAgentService>();
 builder.Services.AddScoped<IInvitationAgentService, EventEase.Infrastructure.Services.AI.Agents.InvitationAgentService>();
 builder.Services.AddScoped<IAnalyticsAgentService, EventEase.Infrastructure.Services.AI.Agents.AnalyticsAgentService>();
 builder.Services.AddScoped<IBudgetAgentService, EventEase.Infrastructure.Services.AI.Agents.BudgetAgentService>();
 builder.Services.AddScoped<IIntegrationAgentService, EventEase.Infrastructure.Services.AI.Agents.IntegrationAgentService>();
 
+// Phase 2.0 - Next-Gen AI Services
+builder.Services.AddScoped<IEventAssistantService, EventEase.Infrastructure.Services.AI.EventAssistantService>();
+builder.Services.AddScoped<IMatchmakingService, EventEase.Infrastructure.Services.AI.MatchmakingService>();
+builder.Services.AddScoped<IPredictiveAnalyticsService, EventEase.Infrastructure.Services.AI.PredictiveAnalyticsService>();
+builder.Services.AddScoped<IContentGenerationService, EventEase.Infrastructure.Services.AI.ContentGenerationService>();
+
 // ===== Payment Services Configuration =====
 builder.Services.AddScoped<IStripePaymentService, EventEase.Infrastructure.Services.Payment.StripePaymentService>();
 builder.Services.AddScoped<IPaymentWebhookService, EventEase.Infrastructure.Services.Payment.PaymentWebhookService>();
 builder.Services.AddScoped<IInvoiceService, EventEase.Infrastructure.Services.Payment.InvoiceService>();
+
+// ===== Analytics & Reporting Services Configuration (Phase 1.8) =====
+builder.Services.AddScoped<IAnalyticsService, EventEase.Infrastructure.Services.Analytics.AnalyticsService>();
+builder.Services.AddScoped<IReportService, EventEase.Infrastructure.Services.Analytics.ReportService>();
+
+// ===== Email & Notification Services Configuration =====
+builder.Services.AddScoped<IEmailService, EventEase.Infrastructure.Services.Notifications.SendGridEmailService>();
+builder.Services.AddScoped<INotificationService, EventEase.Infrastructure.Services.Notifications.NotificationService>();
+
+// ===== Real-Time Services Configuration (SignalR) =====
+builder.Services.AddScoped<IRealtimeService, EventEase.Infrastructure.Services.Realtime.RealtimeService>();
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.MaximumReceiveMessageSize = 1024 * 1024; // 1 MB
+    options.StreamBufferCapacity = 10;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+});
 
 // ===== JWT Authentication Configuration =====
 var jwtSecret = configuration["JwtSettings:Secret"]
@@ -105,6 +155,19 @@ builder.Services.AddAuthentication(options =>
                 context.Response.Headers.Append("Token-Expired", "true");
             }
             return Task.CompletedTask;
+        },
+        OnMessageReceived = context =>
+        {
+            // Allow SignalR to receive JWT from query string
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) &&
+                (path.StartsWithSegments("/hubs")))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
         }
     };
 });
@@ -139,6 +202,34 @@ builder.Services.AddCors(options =>
         .AllowCredentials();
     });
 });
+
+// ===== GraphQL Configuration =====
+builder.Services
+    .AddGraphQLServer()
+    .AddQueryType<Query>()
+    .AddMutationType<Mutation>()
+    .AddSubscriptionType<Subscription>()
+    .AddType<EventType>()
+    .AddType<GuestType>()
+    .AddType<RegistrationType>()
+    .AddType<TenantType>()
+    .AddType<UserType>()
+    .AddDataLoader<EventByIdDataLoader>()
+    .AddDataLoader<GuestByIdDataLoader>()
+    .AddDataLoader<RegistrationByIdDataLoader>()
+    .AddDataLoader<TenantByIdDataLoader>()
+    .AddDataLoader<UserByIdDataLoader>()
+    .AddDataLoader<RegistrationsByEventIdDataLoader>()
+    .AddFiltering()
+    .AddSorting()
+    .AddProjections()
+    .AddAuthorization()
+    .AddInMemorySubscriptions()
+    .ModifyRequestOptions(opt =>
+    {
+        opt.IncludeExceptionDetails = builder.Environment.IsDevelopment();
+        opt.ExecutionTimeout = TimeSpan.FromSeconds(30);
+    });
 
 // ===== API Controllers =====
 builder.Services.AddControllers()
@@ -241,6 +332,25 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// ===== GraphQL Endpoint =====
+app.MapGraphQL("/graphql")
+    .WithOptions(new HotChocolate.AspNetCore.GraphQLServerOptions
+    {
+        Tool = {
+            Enable = builder.Environment.IsDevelopment()
+        }
+    });
+
+// ===== SignalR Hub Endpoints =====
+app.MapHub<EventEase.Infrastructure.Hubs.EventHub>("/hubs/events")
+    .RequireAuthorization();
+
+app.MapHub<EventEase.Infrastructure.Hubs.NotificationHub>("/hubs/notifications")
+    .RequireAuthorization();
+
+app.MapHub<EventEase.Infrastructure.Hubs.AnalyticsHub>("/hubs/analytics")
+    .RequireAuthorization("TenantOwnerOrAdmin");
+
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new
 {
@@ -259,5 +369,7 @@ app.MapGet("/error", () => Results.Problem("An error occurred processing your re
 app.Logger.LogInformation("EventEase API starting...");
 app.Logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 app.Logger.LogInformation("Swagger UI available at: {Url}", app.Environment.IsDevelopment() ? "http://localhost:5000" : "N/A");
+app.Logger.LogInformation("GraphQL endpoint available at: /graphql");
+app.Logger.LogInformation("GraphQL Banana Cake Pop UI available at: /graphql (in development mode)");
 
 app.Run();

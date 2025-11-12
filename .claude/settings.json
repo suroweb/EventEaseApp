@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "beforeEdit": {
+      "command": "echo 'Editing file...'",
+      "enabled": false
+    },
+    "afterEdit": {
+      "command": "dotnet format",
+      "enabled": false
+    },
+    "beforeWrite": {
+      "command": "echo 'Creating file...'",
+      "enabled": false
+    },
+    "afterWrite": {
+      "command": "dotnet format",
+      "enabled": false
+    }
+  },
+  "formatting": {
+    "autoFormat": true,
+    "formatOnSave": true
+  },
+  "testing": {
+    "autoTest": false,
+    "testOnSave": false
+  }
+}

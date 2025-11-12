@@ -20,6 +20,9 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     <PackageReference Include="Stripe.net" Version="46.4.0" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="9.0.0" />
+    <PackageReference Include="QuestPDF" Version="2024.12.3" />
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
   </ItemGroup>
 
   <ItemGroup>
