@@ -11,6 +11,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventEase.Infrastructure", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventEase.API", "EventEase.API\EventEase.API.csproj", "{A4B4C4D4-E4F4-4A4B-8C8D-444444444444}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventEase.Domain.Tests", "tests\EventEase.Domain.Tests\EventEase.Domain.Tests.csproj", "{B1B1C1D1-E1F1-4A4B-8C8D-555555555555}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventEase.Application.Tests", "tests\EventEase.Application.Tests\EventEase.Application.Tests.csproj", "{B2B2C2D2-E2F2-4A4B-8C8D-666666666666}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventEase.Infrastructure.Tests", "tests\EventEase.Infrastructure.Tests\EventEase.Infrastructure.Tests.csproj", "{B3B3C3D3-E3F3-4A4B-8C8D-777777777777}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventEase.API.Tests", "tests\EventEase.API.Tests\EventEase.API.Tests.csproj", "{B4B4C4D4-E4F4-4A4B-8C8D-888888888888}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,5 +41,21 @@ Global
 		{A4B4C4D4-E4F4-4A4B-8C8D-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A4B4C4D4-E4F4-4A4B-8C8D-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A4B4C4D4-E4F4-4A4B-8C8D-444444444444}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1B1C1D1-E1F1-4A4B-8C8D-555555555555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1B1C1D1-E1F1-4A4B-8C8D-555555555555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1B1C1D1-E1F1-4A4B-8C8D-555555555555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1B1C1D1-E1F1-4A4B-8C8D-555555555555}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2B2C2D2-E2F2-4A4B-8C8D-666666666666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2B2C2D2-E2F2-4A4B-8C8D-666666666666}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2B2C2D2-E2F2-4A4B-8C8D-666666666666}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2B2C2D2-E2F2-4A4B-8C8D-666666666666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3B3C3D3-E3F3-4A4B-8C8D-777777777777}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3B3C3D3-E3F3-4A4B-8C8D-777777777777}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3B3C3D3-E3F3-4A4B-8C8D-777777777777}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3B3C3D3-E3F3-4A4B-8C8D-777777777777}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4B4C4D4-E4F4-4A4B-8C8D-888888888888}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4B4C4D4-E4F4-4A4B-8C8D-888888888888}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4B4C4D4-E4F4-4A4B-8C8D-888888888888}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4B4C4D4-E4F4-4A4B-8C8D-888888888888}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

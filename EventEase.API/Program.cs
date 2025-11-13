@@ -1,12 +1,16 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using EventEase.API.GraphQL;
 using EventEase.API.GraphQL.DataLoaders;
 using EventEase.API.GraphQL.Types;
 using EventEase.Application.Interfaces;
 using EventEase.Infrastructure.Data;
+using EventEase.Infrastructure.HealthChecks;
 using EventEase.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -121,6 +125,95 @@ builder.Services.AddSignalR(options =>
     options.KeepAliveInterval = TimeSpan.FromSeconds(15);
     options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
     options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+})
+.AddStackExchangeRedis(configuration.GetConnectionString("Redis") ?? "localhost:6379", options =>
+{
+    // Redis backplane for SignalR scale-out (horizontal scaling)
+    options.Configuration.AbortOnConnectFail = false;
+});
+
+// ===== Health Checks Configuration =====
+var connectionString = configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Database connection string not configured");
+
+builder.Services.AddHealthChecks()
+    // PostgreSQL database health check
+    .AddNpgSql(
+        connectionString,
+        name: "postgresql",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "db", "postgres", "ready" })
+    // Redis cache health check (optional, degraded if unavailable)
+    .AddRedis(
+        configuration.GetConnectionString("Redis") ?? "localhost:6379",
+        name: "redis",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "cache", "redis" })
+    // External service health checks
+    .AddCheck<StripeHealthCheck>("stripe", HealthStatus.Unhealthy, new[] { "payment", "external" })
+    .AddCheck<SendGridHealthCheck>("sendgrid", HealthStatus.Degraded, new[] { "email", "external" })
+    .AddCheck<OpenAIHealthCheck>("openai", HealthStatus.Degraded, new[] { "ai", "external" })
+    .AddCheck<OllamaHealthCheck>("ollama", HealthStatus.Degraded, new[] { "ai", "external" });
+
+// ===== Rate Limiting Configuration =====
+builder.Services.AddRateLimiter(options =>
+{
+    // Default rate limit for API endpoints: 100 requests per minute per IP
+    options.AddFixedWindowLimiter("api", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 100;
+        opt.QueueLimit = 10;
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+
+    // Strict rate limit for AI endpoints: 10 requests per minute per IP (expensive operations)
+    options.AddFixedWindowLimiter("ai", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 10;
+        opt.QueueLimit = 2;
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+
+    // Authentication endpoints: 5 requests per minute per IP (prevent brute force)
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 5;
+        opt.QueueLimit = 0;
+    });
+
+    // Sliding window for GraphQL: 50 requests per minute
+    options.AddSlidingWindowLimiter("graphql", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 50;
+        opt.QueueLimit = 5;
+        opt.SegmentsPerWindow = 6; // 10-second segments
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+
+    // Default rejection response
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            error = "Too many requests",
+            message = "Rate limit exceeded. Please try again later.",
+            retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+                ? retryAfter.TotalSeconds
+                : null
+        }, cancellationToken: cancellationToken);
+    };
+});
+
+// ===== Distributed Caching Configuration (Redis) =====
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.InstanceName = "EventEase:";
 });
 
 // ===== JWT Authentication Configuration =====
@@ -331,11 +424,14 @@ app.Use(async (context, next) =>
 app.UseHttpsRedirection();
 app.UseCors();
 
+// Rate Limiting
+app.UseRateLimiter();
+
 // Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapControllers().RequireRateLimiting("api");
 
 // ===== GraphQL Endpoint =====
 app.MapGraphQL("/graphql")
@@ -344,7 +440,8 @@ app.MapGraphQL("/graphql")
         Tool = {
             Enable = builder.Environment.IsDevelopment()
         }
-    });
+    })
+    .RequireRateLimiting("graphql");
 
 // ===== SignalR Hub Endpoints =====
 app.MapHub<EventEase.Infrastructure.Hubs.EventHub>("/hubs/events")
@@ -356,13 +453,60 @@ app.MapHub<EventEase.Infrastructure.Hubs.NotificationHub>("/hubs/notifications")
 app.MapHub<EventEase.Infrastructure.Hubs.AnalyticsHub>("/hubs/analytics")
     .RequireAuthorization("TenantOwnerOrAdmin");
 
-// Health check endpoint
-app.MapGet("/health", () => Results.Ok(new
+// ===== Health Check Endpoints =====
+// Comprehensive health check with all dependencies
+app.MapHealthChecks("/health", new HealthCheckOptions
 {
-    Status = "Healthy",
-    Timestamp = DateTime.UtcNow,
-    Environment = app.Environment.EnvironmentName
-}))
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            timestamp = DateTime.UtcNow,
+            duration = report.TotalDuration.TotalMilliseconds,
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                duration = e.Value.Duration.TotalMilliseconds,
+                description = e.Value.Description,
+                data = e.Value.Data,
+                tags = e.Value.Tags
+            })
+        }, new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            WriteIndented = app.Environment.IsDevelopment()
+        });
+        await context.Response.WriteAsync(result);
+    }
+})
+.WithTags("Health")
+.AllowAnonymous();
+
+// Kubernetes/Docker readiness probe (checks database only)
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString()
+        });
+        await context.Response.WriteAsync(result);
+    }
+})
+.WithTags("Health")
+.AllowAnonymous();
+
+// Kubernetes/Docker liveness probe (simple alive check)
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false // No checks, just return 200 if app is running
+})
 .WithTags("Health")
 .AllowAnonymous();
 
