@@ -1,0 +1,14 @@
+{
+  "system_blueprint": {
+    "metadata": {
+      "name": "EventEaseApp",
+      "version": "2.0.0",
+      "analyzed_date": "2025-11-13",
+      "complexity_score": 8.5,
+      "reproduction_effort_hours": 360,
+      "lines_of_code": 33323,
+      "total_files": 253,
+      "production_readiness": "95%"
+    }
+  }
+}
